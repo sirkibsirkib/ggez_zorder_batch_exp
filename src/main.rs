@@ -63,7 +63,7 @@ impl event::EventHandler for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx);
-        self.drawer.draw();
+        self.drawer.draw(ctx);
         let x = Instant::now();
         self.drawer.clear();
         // for batch in self.batches.iter() {

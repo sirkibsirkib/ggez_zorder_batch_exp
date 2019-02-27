@@ -1,5 +1,10 @@
 
+use ggez::Context;
+use std::collections::HashMap;
+use ggez::graphics::Image;
+use ggez::graphics::spritebatch::SpriteBatch;
 use std::cmp::Ordering;
+use ggez::graphics::{self, Point2};
 
 
 use ggez::graphics::DrawParam;
@@ -39,7 +44,9 @@ impl DrawUnit {
 }
 
 pub struct Drawer {
-	data: Vec<DrawUnit>
+	batch: Option<SpriteBatch>,
+	data: Vec<DrawUnit>,
+	images: HashMap<ImageKey, Image>,
 }
 
 impl Drawer {
@@ -48,15 +55,28 @@ impl Drawer {
 	pub fn new() -> Self {
 		Drawer {
 			data: vec![],
+			batch: None,
+			images: HashMap::new(),
 		}
 	}
+
+	pub fn add_image(&mut self, image: Image) -> ImageKey {
+		for x in 0.. {
+			let key = ImageKey(x);
+			if !self.images.contains_key(&key) {
+				self.images.insert(key, image);
+				return key;
+			}
+		}
+		panic!("NIO MORE KEYS");
+	} 
 
 	fn find_insertion_for(&self, image_key: ImageKey, z: f32) -> (usize, bool) {
 		for (i, d) in self.data.iter().enumerate() {
 			match d.order(z) {
-				Equal => return (i, true),
-				Less => return (i, false),
-				Greater => {},
+				Ordering::Equal => return (i, true), // TODO split case if image_key mismatches
+				Ordering::Less => return (i, false),
+				Ordering::Greater => {},
 			} 
 		}
 		(self.data.len()-1, false)
@@ -74,10 +94,25 @@ impl Drawer {
 		self.data[index].insert(z, param);
 	}
 
-	pub fn draw(&self) {
-		//TODO
+	pub fn draw(&mut self, ctx: &mut Context) {
+		for d in self.data.iter() {
+			let image_key = d.image_key;
+			let image = self.images.get(&image_key).expect("BAD KEY").clone();
+			match &mut self.batch {
+				None => self.batch = Some(SpriteBatch::new(image)),
+				Some(b) => { let _ = b.set_image(image); b.clear(); } ,
+			}
+			if let Some(ref mut b) = &mut self.batch {
+				for (param, _depth) in d.instances.iter() {
+					b.add(param.clone());
+				}
+				graphics::draw(ctx, b, Point2::new(0., 0.), 0.).unwrap();
+			} else {
+				panic!("BATCH NOT NULL FOR SURE MY GUY");
+			}
+		}
 	}
-	pub fn clear(&self) {
+	pub fn clear(&mut self) {
 		self.data.clear();
 	}
 }
