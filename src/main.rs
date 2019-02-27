@@ -8,7 +8,7 @@ use ggez::graphics::Rect;
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::graphics::{Point2};
 use ggez::{graphics, event, conf};
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 
 mod drawer;
@@ -16,7 +16,7 @@ mod drawer;
 use drawer::{Drawer, ImageKey};
 
 struct MainState {
-    batches: Vec<SpriteBatch>,
+    // batches: Vec<SpriteBatch>,
     drawer: Drawer,
 }
 
@@ -26,29 +26,34 @@ impl MainState {
     	let mut img = graphics::Image::new(ctx, "/sheet.png")?;
         img.set_filter(graphics::FilterMode::Nearest);
 
-        let start = Instant::now();
-        let batches = [5, 10, 20, 100, 1000, 30, 20, 5, 5, 5, 5000, 2, 2, 40, 50, 100].into_iter().map(|&num| {
-            let mut batch = SpriteBatch::new(img.clone());
-            for i in 0..num {
-                batch.add(DrawParam {
-                    src: Rect {
-                        x: (i%4) as f32 * 0.25,
-                        y: ((num/7)%4) as f32 * 0.25,
-                        w: 0.25,
-                        h: 0.25,
-                    },
-                    scale: Point2::new(0.3, 0.3),
-                    dest: Point2::new(700.0 * i as f32 / num as f32, 500.0 * i as f32 / num as f32),
-                    ..DrawParam::default()
-                });
-            }
-            batch
-        }).collect();
-        println!("setup took {:?} ", start.elapsed());
         let mut drawer = Drawer::new();
+
+        let image_key = drawer.add_image(img.clone());
+        let image_key2 = drawer.add_image(img.clone());
+        let param = || {
+            DrawParam {
+                src: Rect {
+                    x: (rand::random::<u8>()%4) as f32 * 0.25,
+                    y: (rand::random::<u8>()%4) as f32 * 0.25,
+                    w: 0.25,
+                    h: 0.25,
+                },
+                scale: Point2::new(0.3, 0.3),
+                dest: Point2::new(rand::random::<f32>() * 500.0, rand::random::<f32>() * 480.0),
+                ..DrawParam::default()
+            }
+        };
+        
+        let start = Instant::now();
+        for _ in 0..1000 {
+            drawer.add(image_key, param(), rand::random::<f32>());
+            drawer.add(image_key2, param(), rand::random::<f32>());
+        }
+        println!("setup took {:?} ", start.elapsed());
+        drawer.stat();
         
         let s = MainState {
-        	batches,
+        	// batches,
             drawer,
         };
         Ok(s)
@@ -63,9 +68,9 @@ impl event::EventHandler for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx);
-        self.drawer.draw(ctx);
         let x = Instant::now();
-        self.drawer.clear();
+        // self.drawer.clear();
+        self.drawer.draw(ctx);
         // for batch in self.batches.iter() {
         //     graphics::draw(ctx, batch, Point2::new(50., 50.), 0.).unwrap();
         // }
