@@ -158,34 +158,44 @@ impl Drawer {
 	}
 
 	pub fn draw(&mut self, ctx: &mut Context) {
+		const DEBUG: bool = false;
+
 		let mut prep = Duration::from_millis(0);
 		let mut gfx = Duration::from_millis(0);
 		for d in self.data.iter() {
 			let image_key = d.image_key;
 			let image = self.images.get(&image_key).expect("BAD KEY").clone();
-			match &mut self.batch {
-				None => self.batch = Some(SpriteBatch::new(image)),
-				Some(b) => { let _ = b.set_image(image); b.clear(); } ,
-			}
-			if let Some(ref mut b) = &mut self.batch {
 
-				let t1 = Instant::now();
-				for (param, _depth) in d.instances.iter() {
-					b.add(param.clone());
-				}
-				let t2 = Instant::now();
-				prep += t2-t1;
-				let t2 = Instant::now();
-				graphics::draw(ctx, b, Point2::new(0., 0.), 0.).unwrap();
-				let t3 = Instant::now();
-				gfx += t3-t2;
+			if d.instances.len() == 1 {
+				graphics::draw_ex(ctx, &image, d.instances[0].0).unwrap();
 			} else {
-				panic!("BATCH NOT NULL FOR SURE MY GUY");
+				match &mut self.batch {
+					None => self.batch = Some(SpriteBatch::new(image)),
+					Some(b) => { let _ = b.set_image(image); b.clear(); } ,
+				}
+				if let Some(ref mut b) = &mut self.batch {
+
+					let t1 = Instant::now();
+					for (param, _depth) in d.instances.iter() {
+						b.add(param.clone());
+					}
+					let t2 = Instant::now();
+					prep += t2-t1;
+					let t2 = Instant::now();
+					graphics::draw(ctx, b, Point2::new(0., 0.), 0.).unwrap();
+					let t3 = Instant::now();
+					gfx += t3-t2;
+				} else {
+					panic!("BATCH NOT NULL FOR SURE MY GUY");
+				}
 			}
 		}
-		println!("prep {:?}, gfx {:?}", prep, gfx);
+		if DEBUG {
+			println!("prep {:?}, gfx {:?}", prep, gfx);
+		}
 	}
 	pub fn clear(&mut self) {
 		self.data.clear();
 	}
 }
+
